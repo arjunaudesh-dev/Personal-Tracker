@@ -1,0 +1,65 @@
+import { MindMapTaskNode } from '@/types/mindmap';
+
+export const mockCivilSubtasks: MindMapTaskNode[] = [
+  {
+    id: 'subtask-wire-nails',
+    parentId: 'task-slab-formwork',
+    title: 'Wire Nails (2.5" & 3") & Binding Wire Procurement',
+    markdownNotes: 'Procure 50kg GI binding wire and 25kg wire nails from Colombo Hardware Depot.',
+    groupCategory: 'Civil',
+    status: 'done',
+    priority: 'high',
+    progress: 100,
+    tags: ['Procurement', 'Fasteners'],
+    dueDate: '2026-10-22',
+    cashflow: {
+      estimatedCost: 140,
+      actualSpend: 135,
+      currency: 'USD',
+      items: [
+        { id: 'b1', description: 'Wire Nails 2.5 inch (15kg)', quantity: 15, unit: 'kg', unitRate: 3.2, total: 48, category: 'Material' },
+        { id: 'b2', description: 'Wire Nails 3.0 inch (10kg)', quantity: 10, unit: 'kg', unitRate: 3.5, total: 35, category: 'Material' },
+        { id: 'b3', description: 'GI Binding Wire Gauge 18 (25kg)', quantity: 25, unit: 'kg', unitRate: 2.08, total: 52, category: 'Material' },
+      ],
+    },
+    subtasks: [
+      { id: 's1', title: 'Verify warehouse inventory', completed: true },
+      { id: 's2', title: 'Transport to Naval Yard gate 4', completed: true },
+    ],
+  },
+  {
+    id: 'subtask-formwork-timber',
+    parentId: 'task-slab-formwork',
+    title: 'Shuttering Formwork & Marine Plywood Assembly',
+    markdownNotes: '18mm film-faced marine plywood shuttering erected with heavy steel props.',
+    groupCategory: 'Civil',
+    status: 'in_progress',
+    priority: 'urgent',
+    progress: 75,
+    tags: ['Formwork', 'Carpentry'],
+    dueDate: '2026-10-24',
+    cashflow: {
+      estimatedCost: 850,
+      actualSpend: 620,
+      currency: 'USD',
+      items: [
+        { id: 'b4', description: 'Marine Shuttering Plywood 18mm', quantity: 20, unit: 'sheets', unitRate: 32, total: 640, category: 'Material' },
+        { id: 'b5', description: 'Acro Props & Steel Bracing', quantity: 30, unit: 'units', unitRate: 7, total: 210, category: 'Equipment' },
+      ],
+    },
+  },
+  {
+    id: 'subtask-nhq-concurrence',
+    parentId: 'task-slab-concrete',
+    title: 'Naval Headquarters (NHQ) Concurrence Letter',
+    markdownNotes: 'Formal clearance sign-off from Chief Civil Engineer for grade C35 casting.',
+    groupCategory: 'Civil',
+    status: 'in_progress',
+    priority: 'urgent',
+    progress: 60,
+    tags: ['Approvals', 'NHQ', 'Military'],
+    dueDate: '2026-10-23',
+    reminders: [{ id: 'rem-nhq', time: '11:00', label: 'Call Commander Silva at NHQ Works', syncedGCal: true }],
+    contacts: [{ id: 'c1', name: 'Cmdr. Silva', role: 'Chief Engineer NHQ', phone: '+94771234567', whatsapp: '+94771234567' }],
+  },
+];
