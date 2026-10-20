@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// NEXUS LIFE-OS — Firestore security rules for the document mirror.
+// The relational source of truth is PostgreSQL/Supabase; Firestore provides
+// the offline-capable document cache used by the wearable and calendar bridges.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidTask() {
+      return request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 255
+        && request.resource.data.groupCategory in ['Work', 'Health', 'Finance', 'Career', 'Personal', 'System']
+        && request.resource.data.status in ['todo', 'in-progress', 'blocked', 'done', 'archived']
+        && request.resource.data.priority in ['critical', 'high', 'medium', 'low']
+        && request.resource.data.progress is int
+        && request.resource.data.progress >= 0
+        && request.resource.data.progress <= 100;
+    }
+
+    // ── Task documents ─────────────────────────────────────────────────────
+    match /users/{userId}/tasks/{taskId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidTask();
+      allow update: if isOwner(userId) && isValidTask();
+      allow delete: if isOwner(userId);
+    }
+
+    // ── Cross-group links ──────────────────────────────────────────────────
+    match /users/{userId}/links/{linkId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Financial ledger ───────────────────────────────────────────────────
+    match /users/{userId}/transactions/{transactionId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && request.resource.data.amount is number
+        && request.resource.data.amount >= 0
+        && request.resource.data.bucket in ['needs', 'wants', 'savings']
+        && request.resource.data.type in ['income', 'expense'];
+      allow delete: if isOwner(userId);
+    }
+
+    // ── Wearable telemetry (append-only from the sync worker) ──────────────
+    match /users/{userId}/telemetry/{dayId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+        && request.resource.data.date is string
+        && request.resource.data.steps is int;
+    }
+
+    // ── Clinical lab reports ───────────────────────────────────────────────
+    match /users/{userId}/labs/{reportId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.source in ['gemini-vision', 'manual', 'local-heuristic'];
+      allow update, delete: if isOwner(userId);
+    }
+
+    // ── Settings / profile ─────────────────────────────────────────────────
+    match /users/{userId}/profile/{document=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Everything else is denied by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

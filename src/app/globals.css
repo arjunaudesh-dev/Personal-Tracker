@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --nexus-cyan: 34 211 238;
+  --nexus-violet: 167 139 250;
+  --nexus-emerald: 52 211 153;
+  --nexus-amber: 251 191 36;
+  --nexus-rose: 251 113 133;
+  --glass-bg: 255 255 255;
+  --glass-alpha: 0.035;
+  --glass-border: 255 255 255;
+  --glass-border-alpha: 0.09;
+}
+
+@layer base {
+  * {
+    @apply border-white/5;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 text-slate-200 antialiased;
+    background-image: theme('backgroundImage.aurora');
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(var(--nexus-cyan) / 0.28);
+    color: #fff;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(34, 211, 238, 0.35), rgba(167, 139, 250, 0.35));
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(34, 211, 238, 0.6), rgba(167, 139, 250, 0.6));
+    background-clip: padding-box;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-nexus-cyan/60 ring-offset-2 ring-offset-ink-950;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply rounded-2xl border border-white/[0.09] bg-white/[0.035] shadow-glass backdrop-blur-xl;
+  }
+
+  .glass-soft {
+    @apply rounded-xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-md;
+  }
+
+  .glass-hover {
+    @apply transition-all duration-300 hover:border-white/20 hover:bg-white/[0.06];
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-nexus-cyan via-nexus-sky to-nexus-violet bg-clip-text text-transparent;
+  }
+
+  .label-caps {
+    @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-300;
+  }
+
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-200 transition-all duration-200 hover:border-white/25 hover:bg-white/[0.11] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply border-nexus-cyan/40 bg-nexus-cyan/15 text-nexus-cyan hover:border-nexus-cyan/70 hover:bg-nexus-cyan/25;
+  }
+
+  .btn-violet {
+    @apply border-nexus-violet/40 bg-nexus-violet/15 text-nexus-violet hover:border-nexus-violet/70 hover:bg-nexus-violet/25;
+  }
+
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-slate-400 hover:bg-white/5 hover:text-slate-100;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-ink-900/70 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-600 transition-colors focus:border-nexus-cyan/50 focus:outline-none;
+  }
+
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: fadeSlide 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .grid-canvas {
+    background-image: theme('backgroundImage.grid-fade');
+    background-size: 34px 34px;
+  }
+}
+
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* React Flow theming overrides */
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__edge-path {
+  transition: stroke 0.25s ease, stroke-width 0.25s ease;
+}
+.react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+.react-flow__node {
+  cursor: grab;
+}
+.react-flow__node:active {
+  cursor: grabbing;
+}

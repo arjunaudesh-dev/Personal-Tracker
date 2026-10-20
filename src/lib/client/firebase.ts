@@ -1,0 +1,49 @@
+'use client';
+
+import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import {
+  getFirestore,
+  type Firestore,
+  connectFirestoreEmulator,
+} from 'firebase/firestore';
+
+const config = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+
+/** True when the Firebase environment variables are present. */
+export function isFirebaseConfigured() {
+  return Boolean(config.apiKey && config.projectId && config.appId);
+}
+
+/** Lazily initialise the Firebase app, Firestore and Auth instances. */
+export function getFirebase() {
+  if (!isFirebaseConfigured()) return null;
+  if (!app) {
+    app = getApps().length ? getApps()[0]! : initializeApp(config);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    if (process.env.NEXT_PUBLIC_FIREBASE_EMULATOR === 'true') {
+      connectFirestoreEmulator(db, '127.0.0.1', 8080);
+    }
+  }
+  return { app, auth, db };
+}
+
+export function getFirestoreClient() {
+  return getFirebase()?.db ?? null;
+}
+
+export function getAuthClient() {
+  return getFirebase()?.auth ?? null;
+}
