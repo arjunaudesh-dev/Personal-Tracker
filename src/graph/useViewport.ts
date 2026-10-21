@@ -77,6 +77,14 @@ export const useViewport = (bounds: Rect, width: number, height: number) => {
     fit(72, 1.02);
   }, [fit]);
 
+  /** centre the viewport on a world coordinate, honouring the current zoom */
+  const centerOn = useCallback(
+    (wx: number, wy: number) => {
+      setTransform((t) => ({ ...t, x: width / 2 - wx * t.k, y: height / 2 - wy * t.k }));
+    },
+    [width, height],
+  );
+
   const panBy = useCallback((dx: number, dy: number) => {
     setTransform((t) => ({ ...t, x: t.x + dx, y: t.y + dy }));
   }, []);
@@ -89,6 +97,7 @@ export const useViewport = (bounds: Rect, width: number, height: number) => {
     focusOn,
     zoomBy,
     resetZoom,
+    centerOn,
     panBy,
     animating,
     interacted,

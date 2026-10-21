@@ -45,6 +45,7 @@ const defaultView: ViewSettings = {
   visibleUniverseIds: seedUniverses.map((u) => u.id),
   system: 'mind',
   layers: { hierarchy: true, network: false, concept: false },
+  mixedSystems: false,
   layout: 'tree',
   edgeStyle: 'curve',
   showTreeEdges: true,
@@ -137,8 +138,14 @@ const reducer = (state: TrackerState, action: Action): TrackerState => {
       };
     }
 
-    case 'VIEW':
-      return { ...state, view: { ...state.view, ...action.patch } };
+    case 'VIEW': {
+      const next = { ...state.view, ...action.patch };
+      // a search that belonged to the previous universe would keep filtering the new one
+      if (action.patch.universeId && action.patch.universeId !== state.view.universeId) {
+        if (action.patch.search === undefined) next.search = '';
+      }
+      return { ...state, view: next };
+    }
 
     case 'SELECT':
       return {

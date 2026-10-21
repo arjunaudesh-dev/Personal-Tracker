@@ -92,6 +92,8 @@ export interface ViewSettings {
   system: SystemType;
   /** which systems are layered together — only meaningful for 'hybrid' */
   layers: GraphLayers;
+  /** multi-universe scopes: draw each profile in its own preferred system */
+  mixedSystems: boolean;
   layout: LayoutType;
   edgeStyle: EdgeStyle;
   showTreeEdges: boolean;

@@ -23,11 +23,14 @@ import {
 } from '../graph/geometry';
 import { useViewport } from '../graph/useViewport';
 import { NodeCard } from './NodeCard';
+import { Minimap } from './Minimap';
+import { layerPreset } from '../lib/layers';
 import {
   IconClose,
   IconCompress,
   IconExpand,
   IconFit,
+  IconGrid,
   IconLink,
   IconMinus,
   IconPlus,
@@ -94,6 +97,7 @@ export const Canvas: React.FC<Props> = ({
   const [linkSource, setLinkSource] = useState<string | null>(null);
   const [linkKind, setLinkKind] = useState<LinkKind>('relation');
   const [showLegend, setShowLegend] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(true);
   const [panning, setPanning] = useState(false);
 
   const vp = useViewport(plan.bounds, size.w, size.h);
@@ -202,15 +206,35 @@ export const Canvas: React.FC<Props> = ({
         }
       }
     } else {
-      vp.fit(56, 0.95);
+      // keep world labels readable; the chips + minimap cover the macro picture
+      const pad = 56;
+      const raw = Math.min(
+        (size.w - pad * 2) / Math.max(1, plan.bounds.w),
+        (size.h - pad * 2) / Math.max(1, plan.bounds.h),
+        0.95,
+      );
+      const k = Math.max(0.45, raw);
+      vp.animateTo({
+        k,
+        x: size.w / 2 - (plan.bounds.x + plan.bounds.w / 2) * k,
+        y: size.h / 2 - (plan.bounds.y + plan.bounds.h / 2) * k,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.w, size.h, view.scope, view.universeId, view.layout, view.visibleUniverseIds]);
 
   const overview = view.scope !== 'universe';
-  const overviewLod = overview && transform.k < 0.62;
-  const lodMin = transform.k < 0.52 || overviewLod;
-  const showChips = overview && transform.k < 0.72;
+  // the projected fit for this scope — used to pick sensible detail thresholds
+  const fitK = Math.min(
+    (size.w - 112) / Math.max(1, plan.bounds.w),
+    (size.h - 112) / Math.max(1, plan.bounds.h),
+    0.95,
+  );
+  // below ~0.45 the world-space type is unreadable; cards become shapes and the
+  // screen-space universe chips (fixed size) carry the information instead
+  const lodMin = transform.k < 0.45;
+  const overviewLod = overview && lodMin;
+  const showChips = overview && transform.k < (view.mixedSystems ? 0.9 : 0.72);
 
   const effLayers = useMemo(() => {
     if (view.system === 'hybrid') return view.layers;
@@ -220,6 +244,17 @@ export const Canvas: React.FC<Props> = ({
       concept: view.system === 'concept',
     };
   }, [view.system, view.layers]);
+
+  /** in multi-universe scopes each profile can keep its own drawing system */
+  const mixed = view.mixedSystems && view.scope !== 'universe';
+  const systemFor = (universeId: string) =>
+    mixed
+      ? state.universes.find((u) => u.id === universeId)?.system ?? view.system
+      : view.system;
+  const layersFor = (universeId: string) =>
+    mixed
+      ? layerPreset(state.universes.find((u) => u.id === universeId)?.system ?? view.system)
+      : effLayers;
 
   /* ---------------- edges ---------------- */
   const forest = useMemo(() => buildForest(state.nodes), [state.nodes]);
@@ -243,7 +278,10 @@ export const Canvas: React.FC<Props> = ({
         if (!parent) continue;
         const { a, b } = pairAnchors(parent, p, 'tree');
         const accent = parent.universe.accent;
-        const concept = effLayers.concept;
+        const layers = layersFor(p.universe.id);
+        // in mixed mode only one universe is 'focused' — one set of proposition labels is enough
+        const concept =
+          layers.concept && (!mixed || p.universe.id === plan.groups[0]?.universe.id);
         out.push({
           id: `tree-${p.node.id}`,
           a,
@@ -642,7 +680,7 @@ export const Canvas: React.FC<Props> = ({
                     dispatch({ type: 'SELECT', id: null });
                   }}
                 />
-                {e.label && transform.k > (overview ? 0.62 : 0.42) && (
+                {e.label && !lodMin && transform.k > (overview ? 0.62 : 0.42) && (
                   <text
                     className="edge-label"
                     x={edgeMid(e.a, e.b, e.style).x}
@@ -694,6 +732,17 @@ export const Canvas: React.FC<Props> = ({
                 <span className="gh-code">{g.universe.code}</span>
                 <span className="gh-name">{g.universe.name}</span>
                 <span className="gh-meta">
+                  {mixed
+                    ? `${
+                        g.universe.system === 'mind'
+                          ? 'mind'
+                          : g.universe.system === 'network'
+                            ? 'network'
+                            : g.universe.system === 'concept'
+                              ? 'concept'
+                              : 'hybrid'
+                      } · `
+                    : ''}
                   {g.stats.nodes} tasks · {Math.round(g.stats.progress)}%
                 </span>
               </div>
@@ -737,8 +786,8 @@ export const Canvas: React.FC<Props> = ({
           <NodeCard
             key={p.node.id}
             p={p}
-            system={view.system}
-            layers={view.layers}
+            system={systemFor(p.universe.id)}
+            layers={layersFor(p.universe.id)}
             currency={currency}
             selected={selectedNodeId === p.node.id}
             dimmed={!!activeId && !connected?.has(p.node.id)}
@@ -943,6 +992,16 @@ export const Canvas: React.FC<Props> = ({
         )}
       </div>
 
+      {showMinimap && plan.nodes.length > 2 && (
+        <Minimap
+          plan={plan}
+          transform={transform}
+          size={size}
+          onCenter={(x, y) => vp.centerOn(x, y)}
+          onClose={() => setShowMinimap(false)}
+        />
+      )}
+
       <div className="overlay br" data-interactive="overlay">
         <button className="fab" onClick={() => vp.zoomBy(1 / 1.2)} title="Zoom out">
           <IconMinus size={14} />
@@ -952,6 +1011,14 @@ export const Canvas: React.FC<Props> = ({
         </span>
         <button className="fab" onClick={() => vp.zoomBy(1.2)} title="Zoom in">
           <IconPlus size={14} />
+        </button>
+        <button
+          className={cx('fab', showMinimap && 'on')}
+          onClick={() => setShowMinimap((v) => !v)}
+          title="Toggle minimap"
+          aria-label="Toggle minimap"
+        >
+          <IconGrid size={13} />
         </button>
         <button className="fab" onClick={() => vp.fit(80, 1.05)} title="Fit to screen">
           <IconFit size={14} />

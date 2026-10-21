@@ -25,6 +25,9 @@ interface Props {
 
 const LINK_KINDS = Object.keys(linkKindMeta) as LinkKind[];
 
+const crossUniverseCandidates = (rows: Array<{ cross: boolean }>) =>
+  rows.filter((r) => r.cross).length;
+
 export const Inspector: React.FC<Props> = ({
   state,
   dispatch,
@@ -49,6 +52,14 @@ export const Inspector: React.FC<Props> = ({
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [boqInput, setBoqInput] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [pickerKind, setPickerKind] = useState<LinkKind>('relation');
+
+  useEffect(() => {
+    setPickerOpen(false);
+    setPickerQuery('');
+  }, [node?.id]);
 
   useEffect(() => {
     setTitle(node?.title ?? '');
@@ -61,6 +72,60 @@ export const Inspector: React.FC<Props> = ({
         : 0;
     setBoqInput(node?.boq ? String(shown) : '');
   }, [node?.id, node?.boq, node?.notes, node?.title, view.currency]);
+
+  /* --- bridge picker data (must run before any early return: hook order) --- */
+  const focusId = node?.id ?? null;
+  const focusUniverse = node?.universeId ?? null;
+
+  const linkedIds = useMemo(
+    () =>
+      new Set(
+        state.links.flatMap((l) =>
+          focusId ? (l.from === focusId ? [l.to] : l.to === focusId ? [l.from] : []) : [],
+        ),
+      ),
+    [state.links, focusId],
+  );
+
+  const familyIds = useMemo(() => {
+    const set = new Set<string>();
+    if (!focusId) return set;
+    let cur = forest.byId.get(focusId);
+    let guard = 0;
+    while (cur && guard++ < 100) {
+      set.add(cur.id);
+      cur = cur.parentId ? forest.byId.get(cur.parentId) : undefined;
+    }
+    const stack = [focusId];
+    let guard2 = 0;
+    while (stack.length && guard2++ < 500) {
+      const id = stack.pop()!;
+      set.add(id);
+      for (const k of forest.childrenOf.get(id) ?? []) stack.push(k.id);
+    }
+    return set;
+  }, [forest, focusId]);
+
+  const pickerResults = useMemo(() => {
+    if (!pickerOpen || !focusId) return [];
+    const q = pickerQuery.trim().toLowerCase();
+    return state.nodes
+      .filter((x) => x.id !== focusId && !familyIds.has(x.id) && !linkedIds.has(x.id))
+      .map((x) => {
+        const u = state.universes.find((v) => v.id === x.universeId);
+        return { node: x, universe: u, cross: x.universeId !== focusUniverse };
+      })
+      .filter((r) => {
+        if (!q) return true;
+        return (
+          r.node.title.toLowerCase().includes(q) ||
+          (r.universe?.name ?? '').toLowerCase().includes(q) ||
+          (r.universe?.code ?? '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => Number(b.cross) - Number(a.cross) || a.node.title.localeCompare(b.node.title))
+      .slice(0, 40);
+  }, [pickerOpen, pickerQuery, state.nodes, state.universes, focusId, focusUniverse, familyIds, linkedIds]);
 
   if (!node && !link) {
     return (
@@ -442,12 +507,27 @@ export const Inspector: React.FC<Props> = ({
         <div className="rowbtns">
           <button
             className="btn"
-            onClick={() => {
-              dispatch({ type: 'VIEW', patch: { linkMode: true } });
-              dispatch({ type: 'SELECT', id: n.id });
-            }}
+            title="Move under the previous sibling (Tab)"
+            onClick={() => dispatch({ type: 'INDENT', id: n.id })}
           >
-            <IconLink size={12} /> Connect to…
+            ⇥ Indent
+          </button>
+          <button
+            className="btn"
+            title="Move out to the parent's level (Shift+Tab)"
+            disabled={!n.parentId}
+            onClick={() => dispatch({ type: 'OUTDENT', id: n.id })}
+          >
+            ⇤ Outdent
+          </button>
+        </div>
+
+        <div className="rowbtns">
+          <button
+            className={cx('btn', pickerOpen && 'active')}
+            onClick={() => setPickerOpen((v) => !v)}
+          >
+            <IconLink size={12} /> Connect to another node…
           </button>
           <button
             className="btn"
@@ -461,6 +541,77 @@ export const Inspector: React.FC<Props> = ({
             <IconArrowUpRight size={12} /> Universe root
           </button>
         </div>
+
+        {pickerOpen && (
+          <div className="bridgepicker">
+            <div className="bridgepicker-top">
+              <input
+                className="input"
+                autoFocus
+                placeholder="Search any task in any universe…"
+                value={pickerQuery}
+                onChange={(e) => setPickerQuery(e.target.value)}
+                aria-label="Search bridge target"
+              />
+            </div>
+            <div className="bridgepicker-top">
+              <span className="flabel" style={{ whiteSpace: 'nowrap' }}>
+                Relation
+              </span>
+              <select
+                className="select"
+                style={{ height: 26, fontSize: 10.5, flex: 1 }}
+                value={pickerKind}
+                onChange={(e) => setPickerKind(e.target.value as LinkKind)}
+              >
+                {LINK_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {linkKindMeta[k].label} — {linkKindMeta[k].verb}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="bridgepicker-list">
+              {pickerResults.length === 0 && (
+                <div className="bridgepicker-empty">
+                  {state.nodes.length <= 1
+                    ? 'Create tasks in another universe first.'
+                    : 'Nothing matches — try another search, or clear it to see every task.'}
+                </div>
+              )}
+              {pickerResults.map(({ node: target, universe: targetU, cross }) => (
+                <button
+                  key={target.id}
+                  className={cx('bpresult', cross && 'cross')}
+                  style={{ ['--bp-acc' as string]: targetU?.accent ?? 'var(--acc)' }}
+                  onClick={() => {
+                    dispatch({
+                      type: 'ADD_LINK',
+                      from: n.id,
+                      to: target.id,
+                      kind: pickerKind,
+                    });
+                    setPickerOpen(false);
+                    setPickerQuery('');
+                  }}
+                >
+                  <span className="bpresult-code">{targetU?.code ?? '??'}</span>
+                  <span className="bpresult-main">
+                    <span className="bpresult-title">{target.title}</span>
+                    <span className="bpresult-sub">
+                      {targetU?.name} · {target.kind}
+                    </span>
+                  </span>
+                  {cross && <span className="bpresult-badge">cross</span>}
+                </button>
+              ))}
+            </div>
+            <div className="bridgepicker-foot">
+              <IconLink size={10} />
+              {crossUniverseCandidates(pickerResults)} of {pickerResults.length} shown are from other universes
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="drawer-foot">

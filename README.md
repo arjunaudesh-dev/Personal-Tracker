@@ -59,6 +59,11 @@ In **Hybrid**, the layer chips (`Hierarchy`, `Network`, `Concepts`) let you comb
 systems yourself. Hybrid adds degree halos and network pills, keeps the mind-map spine, and
 labels the propositions like a concept map.
 
+**Per-profile systems** (Systems → `Per-profile systems`) goes a step further: in Orbit and
+Constellation each universe is drawn in *its own* default system — so a mind map, a network
+map and a concept map can appear side by side in a single canvas, all sharing the same
+bridges and roll-ups.
+
 Three independent layout engines:
 
 - **Tidy tree** — classic LTR mind map, packed by subtree height
@@ -75,8 +80,10 @@ And four edge renderings: **curved**, **elbow**, **straight** and **arc**.
 | **Orbit** | Every visible profile as a cluster orbiting the core, bridges frame-to-frame |
 | **Constellation** | Profiles side by side for comparison |
 
-Below ~70% zoom the canvas switches to an overview layer (glowing node cores, universe
-chips) so it still reads at a glance; the chips dive into a universe on click.
+The overview scopes never zoom below ~45%, so labels stay legible; a **minimap** (bottom
+right, toggle with the grid button) shows where you are and lets you jump by clicking or
+dragging. When you do zoom far out, cards collapse to status cores and fixed-size universe
+chips take over, so the macro picture still carries tasks, progress and system per profile.
 
 ### 5. The rest of the workflow
 
@@ -85,7 +92,11 @@ chips) so it still reads at a glance; the chips dive into a universe on click.
 - **BOQ**: `Budget line` per node in USD or LKR (indicative conversion, 1 USD = 302.4 LKR);
   parents and universes total their subtree values.
 - **Inspector**: rename, status (todo / doing / done), progress slider (leaves only),
-  budget line, notes, breadcrumb, structure counts and every bridge touching the node.
+  budget line, notes, breadcrumb, structure counts, indent/outdent (re-parent with `Tab` /
+  `Shift+Tab`) and every bridge touching the node.
+- **Bridge picker**: *Connect to another node…* searches every task in every universe,
+  flags cross-universe targets, and creates the bridge with the relation kind you choose —
+  no canvas round-trip required.
 - **Search** across titles and notes; matching branches auto-expand, `Enter` dives to the
   first visible match.
 - **Undo / redo** (`⌘/Ctrl+Z`, `⇧⌘/Ctrl+Z`) across all structural edits.
@@ -109,12 +120,30 @@ as positioned HTML cards over an SVG edge layer (crisp text at any zoom, no canv
 
 ---
 
+## Tests
+
+```bash
+npm test           # both suites
+npm run test:layout  # 531 geometry/model assertions, no browser
+npm run test:ui      # 61 interaction checks in jsdom
+```
+
+`tests/layout-audit.ts` runs the planner over every scope × system × layout × (mixed or
+not) combination and asserts finite coordinates, bounds containment, zero card/portal
+overlaps, plus roll-up maths, collapse/search/hide visibility and the bridge model.
+
+`tests/ui-smoke.mjs` bundles the real app with esbuild, mounts it in jsdom and drives the
+UI: inspecting, renaming, indent/outdent, collapsing, switching systems and layers,
+layouts, orbit/constellation, per-profile systems, minimap, canvas link mode, the bridge
+picker, search, the universe rail, creating a universe, undo and currency.
+
 ## Architecture
 
 ```
 src/
 ├─ types.ts                 domain types: Universe, MindNode, NodeLink, ViewSettings, GraphLayers…
 ├─ data/seed.ts             5 demo universes, tasks, cross-universe bridges
+├─ tests/                   layout audit + jsdom UI smoke (npm test)
 ├─ store/store.tsx          reducer + undo/redo + debounced localStorage + per-universe system sync
 ├─ lib/
 │  ├─ rollup.ts             forest build, descendant roll-ups, universe/aggregate stats
@@ -133,6 +162,7 @@ src/
    ├─ Inspector.tsx         node + bridge editing
    ├─ UniverseRail.tsx      profile manager, bridge list, import/export
    ├─ UniverseModal.tsx     create/edit universe
+   ├─ Minimap.tsx           viewport mini-map
    ├─ StatsStrip.tsx        roll-up KPI cards
    └─ Toasts.tsx            notices
 ```

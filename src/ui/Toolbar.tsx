@@ -267,14 +267,29 @@ export const Toolbar: React.FC<Props> = ({
             />
             Labels
           </label>
+          {view.scope !== 'universe' && (
+            <label
+              className="toggle"
+              title="Draw each universe with its own graph system — mind, network and concept side by side"
+            >
+              <input
+                type="checkbox"
+                checked={view.mixedSystems}
+                onChange={(e) => setView({ mixedSystems: e.target.checked })}
+              />
+              Per-profile systems
+            </label>
+          )}
 
           <div className="spacer" />
 
           <span style={{ fontSize: 10, color: 'var(--faint)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="dot" style={{ background: 'var(--acc)', boxShadow: 'none' }} />
-            {view.system === 'hybrid'
-              ? `Mixed system — ${view.layers.hierarchy ? 'mind' : '—'} × ${view.layers.network ? 'network' : '—'} × ${view.layers.concept ? 'concept' : '—'}`
-              : currentSystem.hint}
+            {view.scope !== 'universe' && view.mixedSystems
+              ? 'Each universe keeps its own drawing system'
+              : view.system === 'hybrid'
+                ? `Mixed system — ${view.layers.hierarchy ? 'mind' : '—'} × ${view.layers.network ? 'network' : '—'} × ${view.layers.concept ? 'concept' : '—'}`
+                : currentSystem.hint}
           </span>
 
           {matchCount !== null && (

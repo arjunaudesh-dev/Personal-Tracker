@@ -245,6 +245,14 @@ const TrackerApp: React.FC = () => {
         document.getElementById('orbit-search')?.focus();
         return;
       }
+      if (e.key === 'Tab' && view.selectedId) {
+        e.preventDefault();
+        dispatch({
+          type: e.shiftKey ? 'OUTDENT' : 'INDENT',
+          id: view.selectedId,
+        });
+        return;
+      }
       if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
         if (e.shiftKey || !view.selectedId) addRoot();
