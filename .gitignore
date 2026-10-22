@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.env
+.env.local
+*.log
+.DS_Store
+*.tsbuildinfo
+
+/public/orbit/
+
+/tests/.billing-smoke.mjs
