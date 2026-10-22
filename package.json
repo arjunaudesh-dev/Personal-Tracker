@@ -1,0 +1,40 @@
+{
+  "name": "personal-tracker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "NEXUS LIFE-OS \u2014 personal executive command center (tasks, finance, health, bloodwork, briefing).",
+  "scripts": {
+    "dev": "npm run build:orbit && next dev -H 0.0.0.0 -p 3000",
+    "build": "npm run build:orbit && next build",
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "build:orbit": "npm --prefix orbit ci && npm --prefix orbit run build",
+    "test:billing": "orbit/node_modules/.bin/esbuild tests/billing-smoke.tsx --bundle --platform=node --format=esm --packages=external --external:../orbit/node_modules/jsdom/lib/api.js --alias:@=./src --outfile=tests/.billing-smoke.mjs --jsx=automatic && node tests/.billing-smoke.mjs",
+    "test": "npm --prefix orbit test && npm run test:billing"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.12.0",
+    "clsx": "^2.1.1",
+    "dagre": "^0.8.5",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^14.3.0",
+    "lucide-react": "^0.474.0",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/dagre": "^0.7.52",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  }
+}

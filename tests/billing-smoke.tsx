@@ -1,0 +1,27 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { NexusProvider, useNexus } from '../src/lib/store';
+import { JSDOM } from '../orbit/node_modules/jsdom/lib/api.js';
+import assert from 'node:assert/strict';
+const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost' });
+Object.assign(globalThis, { window: dom.window, document: dom.window.document });
+let store: ReturnType<typeof useNexus>;
+function Probe() { store = useNexus(); return null; }
+const root = createRoot(document.getElementById('root')!);
+const tick = () => new Promise((r) => setTimeout(r, 30));
+root.render(<NexusProvider><Probe /></NexusProvider>);
+await tick(); await tick();
+const item = { id: 'test', name: 'Dialog', kind: 'Mobile' as const, amount: 10, portal: '', allowanceGb: 20, remainingGb: 12, expiresOn: '', updatedAt: new Date().toISOString() };
+store!.savePackage(item, '2026-10'); await tick();
+assert.equal(store!.state.packages.length, 1);
+assert.equal(store!.state.transactions.filter(t => t.packageId === 'test').length, 1);
+store!.savePackage({ ...item, amount: 12 }, '2026-10'); await tick();
+assert.equal(store!.state.transactions.filter(t => t.packageId === 'test').length, 1);
+assert.equal(store!.state.transactions.find(t => t.packageId === 'test')?.amount, 12);
+store!.savePackage(item, '2026-11'); await tick();
+assert.equal(store!.state.transactions.filter(t => t.packageId === 'test').length, 2);
+store!.removePackage('test'); await tick();
+assert.equal(store!.state.packages.length, 0);
+assert.equal(store!.state.transactions.filter(t => t.packageId === 'test').length, 2);
+root.unmount();
+console.log('Billing smoke passed: add, duplicate prevention, update, next month and retained ledger.');
